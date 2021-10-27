@@ -1,2 +1,5 @@
 # mobidev-rubyInternship-bpa
-Bank Processes Automation is a project written during a Ruby Internship at MobiDev
+Bank Processes Automation is a project written during a Ruby Internship at MobiDev.
+
+## Usage
+Open the necessary folder and read their README.
