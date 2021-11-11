@@ -13,8 +13,8 @@ module Parse
   include ParseFixtures
   include ParseMaterials
 
-  def parse
-    @csv = CSV.read('./data.csv', headers: true)
+  def parse(file)
+    @csv = CSV.parse(file, headers: true)
 
     parse_offices
     parse_rooms

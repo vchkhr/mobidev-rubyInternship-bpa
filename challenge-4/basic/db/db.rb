@@ -6,6 +6,7 @@ require_relative 'add_tables'
 require './parse/parse'
 require './reports/reports'
 
+# Database class
 class Db
   include RemoveTables
   include AddTables

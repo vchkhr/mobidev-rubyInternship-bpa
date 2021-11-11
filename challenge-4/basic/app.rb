@@ -2,8 +2,8 @@
 
 require_relative 'db/db'
 
-dbname = "bpa"
-user = "postgres"
-password = "pass"
+dbname = ''
+user = ''
+password = ''
 
 DB = Db.new(dbname, user, password)
