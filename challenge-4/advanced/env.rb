@@ -3,8 +3,8 @@
 # Data for database connection
 module Env
   def read_env
-    @dbname = 'bpa'
-    @user = 'postgres'
-    @password = 'pass'
+    @dbname = ''
+    @user = ''
+    @password = ''
   end
 end

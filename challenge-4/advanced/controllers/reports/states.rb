@@ -5,7 +5,7 @@ require_relative '../../db/db'
 
 DB = Db.new
 
-# Sates report
+# States report
 class StatesReport
   include Render
 
