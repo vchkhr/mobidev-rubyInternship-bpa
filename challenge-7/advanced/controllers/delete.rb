@@ -7,7 +7,7 @@ class Delete
   include Render
 
   def call(_env)
-    @@DB.remove_tables
+    @@App.remove_tables
 
     render_template 'views/delete.html.erb'
   end

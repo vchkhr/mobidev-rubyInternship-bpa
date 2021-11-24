@@ -10,7 +10,7 @@ class FixtureTypesReport
     @office = env['router.params'][:id]
     @office&.upcase!
 
-    @types, @office_name = @@DB.report_fixture_types(@office)
+    @types, @office_name = @@App.report_fixture_types(@office)
 
     render_template 'views/reports/fixture_types.html.erb'
   end

@@ -10,7 +10,7 @@ class StatesReport
     @state = env['router.params'][:id]
     @state&.upcase!
 
-    @offices = @@DB.report_states(@state)
+    @offices = @@App.report_states(@state)
 
     render_template 'views/reports/states.html.erb'
   end

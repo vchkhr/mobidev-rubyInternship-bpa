@@ -7,7 +7,7 @@ class CostsReport
   include Render
 
   def call(_env)
-    @costs = @@DB.report_costs
+    @costs = @@App.report_costs
 
     render_template 'views/reports/costs.html.erb'
   end

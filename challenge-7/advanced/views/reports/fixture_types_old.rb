@@ -23,52 +23,16 @@
             <% end %>
           </h1>
         </div>
-      </div>
+       </div>
     </div>
 
     <div>
+      <%= @types %>
 
       <% if @types.empty? %>
         <div class="alert alert-danger mt-3 mb-3 m-auto" role="alert" style="width: 500px;">
           There is no data for the office with this ID: <strong><%= @office %></strong>.
         </div>
-      <% else %>
-        <table class="table">
-          <% @types.each do |name, data| %>
-            <tr style='border-bottom: 1px solid black'>
-              <th colspan='5'>
-                <div class='d-flex'>
-                  <h2 class='mt-5 flex-fill'><%= name %></h2>
-                  <h2 class='mt-5'><%= data[:count] %></h2>
-                </div>
-              </th>
-            </tr>
-
-            <tr>
-              <td><strong>Office</strong></td>
-              <td><strong>Type</strong></td>
-              <td><strong>Address</strong></td>
-              <td><strong>LOB</strong></td>
-              <td><strong>Sub Total Count</strong></td>
-            </tr>
-
-            <% data[:offices].each do |office| %>
-              <tr>
-
-                <% if @office.nil? %>
-                  <td><a href="/reports/offices/<%= office[:office_id] %>/fixture_types"><%= office[:office_name] %></a></td>
-                <% else %>
-                  <td><%= office[:office_name] %></td>
-                <% end %>
-
-                <td><%= office[:office_type] %></td>
-                <td><%= office[:office_address] %></td>
-                <td><%= office[:office_lob] %></td>
-                <td><%= office[:count] %></td>
-              </tr>
-            <% end %>
-          <% end %>
-        </table>
       <% end %>
     </div>
 

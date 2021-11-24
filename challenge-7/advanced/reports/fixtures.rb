@@ -3,76 +3,87 @@
 # rubocop:disable Metrics/LineLength
 # rubocop:disable Metrics/MethodLength
 # rubocop:disable Metrics/AbcSize
-# rubocop:disable Metrics/CyclomaticComplexity
-# rubocop:disable Metrics/PerceivedComplexity
 
 # Generates Fixture Types Report
 module ReportFixtureTypes
   def report_fixture_types(office_id)
-    fixtures = @con.exec('SELECT * FROM fixtures ORDER BY type, room_id;')
-
-    rooms = []
-    @con.exec('SELECT * FROM rooms').each do |room|
-      rooms << { id: room['id'], office: room['office_id'] }
-    end
-
-    offices = []
-    @con.exec('SELECT * FROM offices').each do |office|
-      offices << { id: office['id'], name: office['name'], address: office['address'], lob: office['lob'], type: office['type'] }
-    end
-
-    report_fixture_types_body(fixtures, rooms, offices, office_id)
-  end
-
-  def report_fixture_types_body(fixtures, rooms, offices, search_office_id)
-    fixtures_groups = {}
-
-    fixtures.each do |fixture|
-      office_id = rooms.find { |room| room[:id] == fixture['room_id'].to_s } [:office]
-      next if !search_office_id.nil? && office_id != search_office_id
-
-      type = fixture['type']
-      fixtures_groups[type] = {} unless fixtures_groups.key?(type)
-
-      fixtures_groups[type][office_id] = [] unless fixtures_groups[type].key?(office_id)
-      fixtures_groups[type][office_id] << fixture
-    end
-
-    body = ''
     search_office_name = ''
 
-    fixtures_groups.each do |group_name, fixtures_group|
-      group_body = ''
-      group_count = 0
+    if office_id
+      search_office_name = @con.exec_params('SELECT name FROM offices WHERE offices.id=$1;', [office_id])
 
-      fixtures_group.each do |office_id, fixture|
-        fixture_office = offices.find { |office| office[:id] == office_id }
-        office_count = fixture.length
+      return [[], nil] if search_office_name.to_a.empty?
 
-        fixture_str = '<tr>'
-        fixture_str += if search_office_id.nil?
-                         "<td><a href='/reports/offices/#{office_id}/fixture_types'>#{fixture_office[:name]}</a></td>"
-                       else
-                         "<td>#{fixture_office[:name]}</td>"
-                       end
-        fixture_str += "<td>#{fixture_office[:type]}</td>"
-        fixture_str += "<td>#{fixture_office[:address]}</td>"
-        fixture_str += "<td>#{fixture_office[:lob]}</td>"
-        fixture_str += "<td>#{office_count}</td>"
-        fixture_str += '</tr>'
+      search_office_name = search_office_name[0]['name']
 
-        group_body += fixture_str
-        group_count += office_count
+      fixtures = @con.exec_params('
+        SELECT b.fixture_type, b.office_id, b.count,
+        offices.id, offices.name AS office_name, offices.type AS office_type, offices.address AS office_address, offices.lob AS office_lob
+        FROM
 
-        search_office_name = fixture_office[:name] unless search_office_id.nil?
-      end
+        (SELECT a.fixture_type, a.office_id, COUNT(*) AS count
+        FROM
 
-      body += "<tr style='border-bottom: 1px solid black'><th colspan='5'><div class='d-flex'><h2 class='mt-5 flex-fill'>#{group_name}</h2><h2 class='mt-5'>#{group_count}</h2></div></th></tr>"
-      body += "<tr><td><strong>Office</strong></td><td><strong>Type</strong></td><td><strong>Address</strong></td><td><strong>LOB</strong></td><td><strong>Sub Total Count</strong></td></tr>#{group_body}"
+        (SELECT
+        fixtures.type AS fixture_type, fixtures.room_id AS fixture_room_id,
+        rooms.id AS room_id, rooms.office_id AS room_office_id,
+        offices.id AS office_id
+        FROM fixtures
+        INNER JOIN rooms ON fixtures.room_id=rooms.id
+        INNER JOIN offices ON rooms.office_id=offices.id
+        ORDER BY fixtures.type, offices.id)
+
+        AS a
+        GROUP by a.fixture_type, a.office_id
+        HAVING a.office_id=$1)
+
+        AS b
+        INNER JOIN offices ON b.office_id=offices.id
+        ;', [office_id])
+    else
+      fixtures = @con.exec('
+        SELECT b.fixture_type, b.office_id, b.count,
+        offices.id, offices.name AS office_name, offices.type AS office_type, offices.address AS office_address, offices.lob AS office_lob
+        FROM
+
+        (SELECT a.fixture_type, a.office_id, COUNT(*) AS count
+        FROM
+
+        (SELECT
+        fixtures.type AS fixture_type, fixtures.room_id AS fixture_room_id,
+        rooms.id AS room_id, rooms.office_id AS room_office_id,
+        offices.id AS office_id
+        FROM fixtures
+        INNER JOIN rooms ON fixtures.room_id=rooms.id
+        INNER JOIN offices ON rooms.office_id=offices.id
+        ORDER BY fixtures.type, offices.id)
+
+        AS a
+        GROUP by a.fixture_type, a.office_id)
+
+        AS b
+        INNER JOIN offices ON b.office_id=offices.id
+        ;')
+
+      search_office_name = nil
     end
 
-    body = "<table class='table'>#{body}</table>" unless body.empty?
+    types = []
+    types_grouped = {}
 
-    [body, search_office_name]
+    fixtures.each do |fixture|
+      types << { fixture_type: fixture['fixture_type'], count: fixture['count'], office_id: fixture['office_id'], office_name: fixture['office_name'], office_type: fixture['office_type'], office_address: fixture['office_address'], office_lob: fixture['office_lob'] }
+    end
+
+    previous_type = ''
+    types.each do |type|
+      types_grouped[type[:fixture_type]] = { count: 0, offices: [] } unless types_grouped.key?(type[:fixture_type])
+      previous_type = type[:fixture_type]
+
+      types_grouped[type[:fixture_type]][:count] += Integer(type[:count])
+      types_grouped[type[:fixture_type]][:offices] << type
+    end
+
+    [types_grouped, search_office_name]
   end
 end
