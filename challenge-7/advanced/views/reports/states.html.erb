@@ -14,12 +14,10 @@
       <div class="flex-fill h-100">
         <div class="d-flex h-100" style=" align-items: center; justify-content: center;">
           <h1>
-            <% if @state.nil? %>
+            <% if @state_needed.nil? %>
               <span>States Report</span>
-            <% elsif @offices.empty? %>
-              <a href="/reports/states">States Report</a>
             <% else %>
-              <a href="/reports/states">States Report</a> / <%= @state %>
+              <a href="/reports/states">States Report</a> / <%= @state_needed %>
             <% end %>
           </h1>
         </div>
@@ -27,12 +25,40 @@
     </div>
 
     <div>
-      <%= @offices %>
-
-      <% if @offices.empty? %>
+      <% if @states.empty? %>
         <div class="alert alert-danger mt-3 mb-3 m-auto" role="alert" style="width: 500px;">
           There is no data for this state: <strong><%= @state %></strong>.
         </div>
+      <% else %>
+        <table class="table">
+          <% @states.each do |name, data| %>
+            <tr style='border-bottom: 1px solid black'>
+              <th colspan='4'>
+                <% if @state_needed.nil? %>
+                  <h2 class='mt-5 flex-fill'><a href="/reports/states/<%= name %>"><%= name %></a></h2>
+                <% else %>
+                  <h2 class='mt-5 flex-fill'><%= name %></h2>
+                <% end %>
+              </th>
+            </tr>
+
+            <tr>
+              <td><strong>Office</strong></td>
+              <td><strong>Type</strong></td>
+              <td><strong>Address</strong></td>
+              <td><strong>LOB</strong></td>
+            </tr>
+
+            <% data.each do |office| %>
+              <tr>
+                <td><%= office[:name] %></td>
+                <td><%= office[:type] %></td>
+                <td><%= office[:address] %></td>
+                <td><%= office[:lob] %></td>
+              </tr>
+            <% end %>
+          <% end %>
+        </table>
       <% end %>
     </div>
 

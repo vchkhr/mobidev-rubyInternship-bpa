@@ -1,93 +1,56 @@
 # frozen_string_literal: true
 
 # rubocop:disable Metrics/MethodLength
-# rubocop:disable Metrics/AbcSize
-# rubocop:disable Metrics/CyclomaticComplexity
-# rubocop:disable Metrics/PerceivedComplexity
 # rubocop:disable Metrics/LineLength
-
-require 'quickchart'
+# rubocop:disable Metrics/AbcSize
 
 # Generates Marketing Material Costs Report
 module ReportCosts
   def report_costs
-    materials = @con.exec('SELECT * FROM materials ORDER BY type;')
+    materials = @con.exec('
+      SELECT d.office_id, d.material_type, d.subtotal,
+      offices.id AS office_id, offices.name AS office_name
+      FROM (
 
-    fixtures = []
-    @con.exec('SELECT * FROM fixtures').each do |fixture|
-      fixtures << { id: fixture['id'], room: fixture['room_id'] }
-    end
+        SELECT c.office_id, c.material_type,
+        SUM (c.material_cost) AS subtotal
+        FROM (
 
-    rooms = []
-    @con.exec('SELECT * FROM rooms').each do |room|
-      rooms << { id: room['id'], office: room['office_id'] }
-    end
+          SELECT b.material_type, b.material_cost, b.fixture_room_id, b.room_office_id,
+          offices.id AS office_id
+          FROM (
 
-    offices = []
-    @con.exec('SELECT * FROM offices').each do |office|
-      offices << { id: office['id'], name: office['name'] }
-    end
+            SELECT a.material_type, a.material_cost, a.fixture_room_id,
+            rooms.id AS room_id, rooms.office_id AS room_office_id
+            FROM (
 
-    report_costs_body(materials, fixtures, rooms, offices)
-  end
+              SELECT materials.fixture_id AS material_fixture_id, materials.type AS material_type, materials.cost AS material_cost,
+              fixtures.id AS fixture_id, fixtures.room_id AS fixture_room_id
+              FROM materials
+              INNER JOIN fixtures ON materials.fixture_id=fixtures.id)
 
-  def report_costs_body(materials, fixtures, rooms, offices)
-    material_groups = {}
-    material_types = {}
+            AS a
+            INNER JOIN rooms ON a.fixture_room_id=rooms.id)
+
+          AS b
+          INNER JOIN offices ON b.room_office_id=offices.id)
+
+        AS c
+        GROUP by c.office_id, c.material_type)
+
+      AS d
+      INNER JOIN offices ON d.office_id=offices.id
+      ORDER BY d.office_id, d.subtotal
+    ;')
+    offices = {}
 
     materials.each do |material|
-      material_type = material['type']
-      material_cost = Integer(material['cost'])
+      offices[material['office_id']] = { total: 0, name: material['office_name'], types: [] } unless offices.key?(material['office_id'])
 
-      fixture_id = fixtures.find { |fixture| fixture[:id] == material['fixture_id'] }
-      room_id = rooms.find { |room| room[:id] == fixture_id[:room] }[:office]
-      office_id = offices.find { |office| office[:id] == room_id }[:id]
-
-      material_groups[office_id] = {} unless material_groups.key?(office_id)
-      material_groups[office_id][material_type] = 0 unless material_groups[office_id].key?(material_type)
-      material_groups[office_id][material_type] += material_cost
-
-      material_types[material_type] = 0 unless material_types.key?(material_type)
-      material_types[material_type] += material_cost
+      offices[material['office_id']][:types] << { name: material['material_type'], subtotal: material['subtotal'] }
+      offices[material['office_id']][:total] += Integer(material['subtotal'])
     end
 
-    body = "<table class='table'>"
-
-    material_groups.each do |office_id, material_group|
-      group_body = ''
-      group_cost = 0
-      office_name = offices.find { |office| office[:id] == office_id }[:name]
-
-      material_group.each do |type_name, type_cost|
-        fixture_str = '<tr>'
-        fixture_str += "<td>#{type_name}</td>"
-        fixture_str += "<td>#{type_cost}</td>"
-        fixture_str += '</tr>'
-
-        group_body += fixture_str
-        group_cost += type_cost
-      end
-
-      body += "<tr style='border-bottom: 1px solid black'><th colspan='2'><div class='d-flex'><h2 class='mt-5 flex-fill'>#{office_name}</h2><h2 class='mt-5'>#{group_cost}</h2></div></th></tr>"
-      body += "<tr><td><strong>Material Type</strong></td><td><strong>Sub Total Costs</strong></td></tr>#{group_body}"
-    end
-
-    body += '</table>'
-
-    qc = QuickChart.new(
-      {
-        type: 'doughnut',
-        data: {
-          labels: material_types.keys,
-          datasets: [
-            data: material_types.values
-          ]
-        }
-      },
-      width: 600,
-      height: 300
-    )
-
-    body += "<h1 class='mt-5 text-center'>Marketing Material Costs By Type</h1><p class='text-center'><img src='#{qc.get_url}' /></p>"
+    offices
   end
 end

@@ -75,10 +75,8 @@ module ReportFixtureTypes
       types << { fixture_type: fixture['fixture_type'], count: fixture['count'], office_id: fixture['office_id'], office_name: fixture['office_name'], office_type: fixture['office_type'], office_address: fixture['office_address'], office_lob: fixture['office_lob'] }
     end
 
-    previous_type = ''
     types.each do |type|
       types_grouped[type[:fixture_type]] = { count: 0, offices: [] } unless types_grouped.key?(type[:fixture_type])
-      previous_type = type[:fixture_type]
 
       types_grouped[type[:fixture_type]][:count] += Integer(type[:count])
       types_grouped[type[:fixture_type]][:offices] << type
