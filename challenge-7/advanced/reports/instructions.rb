@@ -3,121 +3,74 @@
 # rubocop:disable Metrics/LineLength
 # rubocop:disable Metrics/MethodLength
 # rubocop:disable Metrics/AbcSize
-# rubocop:disable Metrics/CyclomaticComplexity
-# rubocop:disable Metrics/PerceivedComplexity
 
 # Generates Installation Instructions
 module InstructionsGen
   def report_instructions(office_needed)
-    if office_needed.nil?
-      offices = @con.exec('SELECT * FROM offices ORDER BY state;')
+    return report_instructions_office(office_needed) unless office_needed.nil?
 
-      report_instructions_list_offices_body(offices)
-    else
-      materials = @con.exec('SELECT * FROM materials ORDER BY type;')
+    offices = @con.exec('SELECT * FROM offices ORDER BY state;')
 
-      fixtures = []
-      @con.exec('SELECT * FROM fixtures').each do |fixture|
-        fixtures << { id: fixture['id'], name: fixture['name'], room: fixture['room_id'], type: fixture['type'] }
-      end
-
-      rooms = []
-      @con.exec('SELECT * FROM rooms').each do |room|
-        rooms << { id: room['id'], name: room['name'], office: room['office_id'], area: room['area'], max_people: room['max_people'], zone: room['zone'] }
-      end
-
-      office = @con.exec("SELECT * FROM offices WHERE id = #{office_needed}")
-
-      if office.num_tuples.zero?
-        ['', office_needed]
-      else
-        office = office[0]
-
-        instructions_body(materials, fixtures, rooms, office)
-      end
-    end
-  end
-
-  def report_instructions_list_offices_body(offices)
-    body = ''
-    state = ''
+    offices_result = {}
 
     offices.each do |office|
-      if state != office['state']
-        state = office['state']
+      offices_result[office['state']] = [] unless offices_result.key?(office['state'])
 
-        body += "<tr style='border-bottom: 1px solid black'><th colspan='4'><h2 class='mt-5'>#{state}</a></h2></th></tr><tr><td><strong>Office</strong></td><td><strong>Type</strong></td><td><strong>Address</strong></td><td><strong>LOB</strong></td></tr>"
-      end
-
-      office_str = '<tr>'
-      office_str += "<td><a href='/instructions/offices/#{office['id']}'>#{office['name']}</a></td>"
-      office_str += "<td>#{office['type']}</td>"
-      office_str += "<td>#{office['address']}</td>"
-      office_str += "<td>#{office['lob']}</td>"
-      office_str += '</tr>'
-
-      body += office_str
+      offices_result[office['state']] << { id: office['id'], name: office['name'], type: office['type'], address: office['address'], lob: office['lob'] }
     end
 
-    body = "<h6 class='mt-5'>Select the office to continue:</h6><table class='table'>#{body}</table>" unless body.empty?
-
-    [body, '']
+    [offices_result, { id: nil, data: nil }]
   end
 
-  def instructions_body(materials, fixtures, rooms, office)
-    groups = {}
-    area = 0
-    max_people = 0
+  def report_instructions_office(office_needed)
+    office = con.exec_params('SELECT * FROM offices WHERE offices.id=$1', [office_needed])
+    return [[], { id: office_needed, data: nil }] if office.to_a.empty?
 
-    rooms.each do |room|
-      next unless room[:office] == office['id']
+    office = office[0]
+    office_data = { name: office['name'], state: office['state'], address: office['address'], phone: office['phone'], type: office['type'], area: 0, max_people: 0 }
 
-      room[:materials] = {}
-      groups[room[:zone]] = {} unless groups.key?(room[:zone])
-      groups[room[:zone]][room[:id]] = room
+    materials = con.exec_params('
+      SELECT c.material_name, c.material_type, c.fixture_name, c.fixture_type, c.room_name, c.room_zone, c.office_id, c.room_area, c.room_max_people
 
-      area += Integer(room[:area])
-      max_people += Integer(room[:max_people])
-    end
+      FROM(
+        SELECT b.material_name, b.material_type, b.fixture_name, b.fixture_type, b.room_name, b.room_zone, b.room_office_id, b.room_area, b.room_max_people,
+        offices.id AS office_id
+
+        FROM (
+          SELECT a.material_name, a.material_type, a.fixture_name, a.fixture_type, a.fixture_room_id,
+          rooms.id, rooms.name AS room_name, rooms.zone AS room_zone, rooms.office_id AS room_office_id, rooms.area AS room_area, rooms.max_people AS room_max_people
+
+          FROM (
+            SELECT materials.name AS material_name, materials.type AS material_type, materials.fixture_id AS material_fixture_id,
+            fixtures.id AS fixture_id, fixtures.name AS fixture_name, fixtures.type AS fixture_type, fixtures.room_id AS fixture_room_id
+            FROM materials
+            INNER JOIN fixtures ON materials.fixture_id=fixtures.id)
+
+          AS a
+          INNER JOIN rooms ON a.fixture_room_id=rooms.id)
+
+        AS b
+        INNER JOIN offices ON offices.id=b.room_office_id)
+
+      AS c
+      WHERE c.office_id=$1
+    ;', [office_needed])
+
+    instructions = {}
 
     materials.each do |material|
-      fixture = fixtures.find { |fixture_search| fixture_search[:id] == material['fixture_id'] }
+      instructions[material['room_zone']] = {} unless instructions.key?(material['room_zone'])
 
-      groups.each do |_zone, group|
-        group.each do |room_id, room|
-          material['fixture_name'] = fixture[:name]
-          material['fixture_type'] = fixture[:type]
-          room[:materials][material['id']] = material if room_id == fixture[:room]
-        end
-      end
-    end
-
-    body = "<table class='table'>"
-
-    groups.each do |zone, group|
-      group_str = "<tr><th colspan='4'><h2 class='mt-5'>#{zone}</h2></th></tr>"
-
-      group.each do |_room_id, room|
-        group_str += "<tr><th colspan='4'><h5>#{room[:name]}</h5></th></tr><tr><th>Material</th><th>Material Type</th><th>Fixture</th><th>Fixture Type</th></tr>"
-
-        room[:materials].each do |_material_id, material|
-          group_str += '<tr>'
-          group_str += "<td>#{material['name']}</td>"
-          group_str += "<td>#{material['type']}</td>"
-          group_str += "<td>#{material['fixture_name']}</td>"
-          group_str += "<td>#{material['fixture_type']}</td>"
-          group_str += '</tr>'
-        end
+      unless instructions[material['room_zone']].key?(material['room_name'])
+        instructions[material['room_zone']][material['room_name']] = []
+        
+        office_data[:area] += Integer(material['room_area'])
+        office_data[:max_people] += Integer(material['room_max_people'])
       end
 
-      body += group_str
+      instructions[material['room_zone']][material['room_name']] << { material_name: material['material_name'], material_type: material['material_type'], fixture_name: material['fixture_name'], fixture_type: material['fixture_type'] }
     end
 
-    body += '</table>'
-
-    office['area'] = area
-    office['max_people'] = max_people
-
-    [body, office]
+    [instructions, { id: office_needed, data: office_data }]
   end
 end

@@ -12,7 +12,7 @@ class Upload
     if request.post?
       file = File.read(request.params['file'][:tempfile])
 
-      @@DB.connect(file)
+      @@App.connect(file)
 
       [302, { 'Location' => '/uploaded' }, []]
     else

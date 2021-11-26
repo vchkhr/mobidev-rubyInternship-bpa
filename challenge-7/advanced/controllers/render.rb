@@ -3,11 +3,11 @@
 # rubocop:disable Metrics/VariableName
 # rubocop:disable Metrics/ClassVars
 
-require_relative '../db/db'
+require_relative '../app'
 
 # Help module for generating proper Rack responses
 module Render
-  @@DB = Db.new
+  @@App = App.new
 
   def render_template(str)
     template = File.read(str)

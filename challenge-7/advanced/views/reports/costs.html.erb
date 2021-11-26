@@ -19,12 +19,35 @@
     </div>
 
     <div>
-      <%= @costs %>
-
       <% if @costs.empty? %>
         <div class="alert alert-danger mt-3 mb-3 m-auto" role="alert" style="width: 500px;">
           There is no data.
         </div>
+      <% else %>
+        <table class="table">
+          <% @costs.each do |name, data| %>
+            <tr style='border-bottom: 1px solid black'>
+              <th colspan='5'>
+                <div class='d-flex'>
+                  <h2 class='mt-5 flex-fill'><%= data[:name] %></h2>
+                  <h2 class='mt-5'><%= data[:total] %></h2>
+                </div>
+              </th>
+            </tr>
+
+            <tr>
+              <td><strong>Material Type</strong></td>
+              <td><strong>Sub Total Costs</strong></td>
+            </tr>
+
+            <% data[:types].each do |type| %>
+              <tr>
+                <td><%= type[:name] %></td>
+                <td><%= type[:subtotal] %></td>
+              </tr>
+            <% end %>
+          <% end %>
+        </table>
       <% end %>
     </div>
 

@@ -7,10 +7,10 @@ class StatesReport
   include Render
 
   def call(env)
-    @state = env['router.params'][:id]
-    @state&.upcase!
+    @state_needed = env['router.params'][:id]
+    @state_needed&.upcase!
 
-    @offices = @@DB.report_states(@state)
+    @states = @@App.report_states(@state_needed)
 
     render_template 'views/reports/states.html.erb'
   end

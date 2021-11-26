@@ -10,7 +10,7 @@ class Instructions
     @office = env['router.params'][:id]
     @office&.upcase!
 
-    @instructions, @office = @@DB.report_instructions(@office)
+    @instructions, @office = @@App.report_instructions(@office)
 
     render_template 'views/reports/instructions.html.erb'
   end

@@ -7,6 +7,6 @@ class Index
   include Render
 
   def call(_env)
-    render_template @@DB.con.nil? ? 'views/db-error.html.erb' : 'views/index.html.erb'
+    render_template @@App.con.nil? ? 'views/db-error.html.erb' : 'views/index.html.erb'
   end
 end

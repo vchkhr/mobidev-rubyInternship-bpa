@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
 require 'pg'
-require_relative '../env'
-require_relative 'remove_tables'
-require_relative 'add_tables'
-require_relative '../parse/parse'
-require_relative '../reports/report'
+require_relative 'env'
+require_relative 'db/remove_tables'
+require_relative 'db/add_tables'
+require_relative 'parse'
+require_relative 'reports/report'
 
 # Database class
-class Db
+class App
   include Env
   include RemoveTables
   include AddTables
