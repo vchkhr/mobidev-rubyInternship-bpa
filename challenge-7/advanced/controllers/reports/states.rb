@@ -1,19 +1,16 @@
 # frozen_string_literal: true
 
 require_relative '../render'
-require_relative '../../db/db'
 
-DB = Db.new
-
-# States report
+# States Report
 class StatesReport
   include Render
 
   def call(env)
-    @state = env['router.params'][:id]
-    @state&.upcase!
+    @state_needed = env['router.params'][:id]
+    @state_needed&.upcase!
 
-    @offices = DB.report_states(@state)
+    @states = @@App.report_states(@state_needed)
 
     render_template 'views/reports/states.html.erb'
   end
